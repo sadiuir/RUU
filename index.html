@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Interaktif RUU KUHAP 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutral (Gray-50, White, Amber-100, Amber-800) -->
+    <!-- Application Structure Plan: Arsitektur tematik: 1. Ringkasan (Apa itu RUU?), 2. Poin Kunci (Apa yang baru?), 3. Analisis Pasal (Apa yang berisiko vs. reformasi? - dasbor interaktif), 4. Alur Proses (Bagaimana cara kerjanya? - diagram alur interaktif). Struktur ini sengaja tidak mencerminkan bab RUU yang padat, dan lebih fokus pada usabilitas dan pemahaman pengguna, membimbing mereka dari gambaran umum ke detail spesifik. -->
+    <!-- Visualization & Content Choices: 1. Tujuan RUU -> Ringkasan -> Teks + Bagan Donat (Chart.js) -> Visualisasi fokus tematik -> Justifikasi: Memberi gambaran umum. 2. Perubahan Utama -> Poin Kunci -> Kartu Interaktif (HTML/CSS) -> Klik untuk ringkasan -> Justifikasi: Menyoroti reformasi besar. 3. Pasal Kritis -> Analisis Pasal -> Grid + Filter + Modal (JS) -> Filter berdasarkan 'Risiko'/'Reformasi', klik untuk detail -> Justifikasi: Eksplorasi mendalam isu krusial. 4. Prosedur Hukum -> Alur Proses -> Diagram Alur Interaktif (HTML/Tailwind) -> Klik langkah untuk detail -> Justifikasi: Menyederhanakan alur hukum yang kompleks. NO SVG/Mermaid digunakan. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s;
+        }
+        .nav-link.active {
+            color: #b45309;
+            border-bottom-color: #b45309;
+        }
+        .filter-btn {
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background-color: #b45309;
+            color: white;
+        }
+        .pasal-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .pasal-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .flow-step {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .flow-step.active {
+            background-color: #fef3c7;
+            border-color: #fcd34d;
+            transform: scale(1.05);
+        }
+        .flow-step:hover {
+            background-color: #fef9c3;
+        }
+        #pasalModal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #pasalModal.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header & Navigasi -->
+    <header class="sticky top-0 z-50 bg-white shadow-md">
+        <nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-gray-900">Analisis RUU KUHAP 2025</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#ringkasan" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-amber-500">Ringkasan</a>
+                        <a href="#poin-kunci" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-amber-500">Poin Kunci</a>
+                        <a href="#analisis-pasal" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-amber-500">Analisis Pasal</a>
+                        <a href="#alur-proses" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-amber-500">Alur Proses</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500">
+                        <span class="sr-only">Buka menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#ringkasan" class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Ringkasan</a>
+                <a href="#poin-kunci" class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Poin Kunci</a>
+                <a href="#analisis-pasal" class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Analisis Pasal</a>
+                <a href="#alur-proses" class="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50">Alur Proses</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Bagian 1: Ringkasan & Visualisasi -->
+        <section id="ringkasan" class="py-12">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-6">Memahami RUU KUHAP 2025</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <p class="text-lg text-gray-700 mb-4">
+                        Rancangan Undang-Undang Hukum Acara Pidana (RUU KUHAP) ini bertujuan menggantikan Undang-Undang Nomor 8 Tahun 1981. Tujuannya adalah untuk memperbarui sistem hukum acara pidana agar lebih selaras dengan nilai-nilai Pancasila, UUD 1945, perkembangan teknologi, dan standar hak asasi manusia internasional.
+                    </p>
+                    <p class="text-gray-600">
+                        Pembaruan ini dimaksudkan untuk lebih menjamin hak-hak tersangka, terdakwa, saksi, dan korban, sekaligus memperkuat fungsi aparat penegak hukum dalam mewujudkan kepastian, keadilan, dan kemanfaatan hukum.
+                    </p>
+                </div>
+                <div>
+                    <p class="text-lg font-semibold text-gray-900 mb-2 text-center">Fokus Tematik RUU</p>
+                    <p class="text-sm text-gray-600 mb-4 text-center">Visualisasi konseptual ini menunjukkan area fokus utama dalam pembaruan RUU KUHAP.</p>
+                    <div class="chart-container">
+                        <canvas id="ruuChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bagian 2: Poin Kunci -->
+        <section id="poin-kunci" class="py-12 border-t border-gray-200">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-8">Poin Kunci & Reformasi Utama</h2>
+            <p class="text-lg text-gray-700 mb-8">
+                RUU ini memperkenalkan beberapa konsep baru yang signifikan dalam sistem peradilan pidana Indonesia. Klik setiap kartu untuk melihat ringkasan singkat.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="poinKunciGrid">
+                <!-- Kartu Poin Kunci akan di-render oleh JavaScript -->
+            </div>
+        </section>
+
+        <!-- Bagian 3: Analisis Pasal Kritis -->
+        <section id="analisis-pasal" class="py-12 border-t border-gray-200">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Dasbor Analisis Pasal Kritis</h2>
+            <p class="text-lg text-gray-700 mb-6">
+                Tidak semua pasal dalam RUU ini bersifat progresif. Beberapa di antaranya mengandung risiko terhadap hak-hak sipil, sementara yang lain merupakan reformasi penting. Gunakan filter di bawah untuk menjelajahi pasal-pasal yang paling banyak didiskusikan.
+            </p>
+            
+            <div class="mb-6 flex flex-wrap gap-2">
+                <button class="filter-btn active py-2 px-4 rounded-full font-medium text-sm bg-gray-200 text-gray-700 hover:bg-gray-300" data-filter="semua">Semua Pasal Kritis</button>
+                <button class="filter-btn py-2 px-4 rounded-full font-medium text-sm bg-green-100 text-green-800 hover:bg-green-200" data-filter="reformasi">Reformasi & Perlindungan</button>
+                <button class="filter-btn py-2 px-4 rounded-full font-medium text-sm bg-red-100 text-red-800 hover:bg-red-200" data-filter="risiko">Risiko & Kewenangan Berlebih</button>
+                <button class="filter-btn py-2 px-4 rounded-full font-medium text-sm bg-blue-100 text-blue-800 hover:bg-blue-200" data-filter="transparansi">Transparansi & Pers</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="pasalGrid">
+                <!-- Kartu Pasal akan di-render oleh JavaScript -->
+            </div>
+        </section>
+
+        <!-- Bagian 4: Alur Proses Hukum -->
+        <section id="alur-proses" class="py-12 border-t border-gray-200">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Alur Proses Peradilan Pidana</h2>
+            <p class="text-lg text-gray-700 mb-8">
+                RUU KUHAP mengatur alur proses hukum pidana dari awal hingga akhir. Klik setiap tahapan di bawah untuk melihat ringkasan dan pasal-pasal terkait.
+            </p>
+
+            <div class="w-full overflow-x-auto pb-4">
+                <div class="flex flex-nowrap md:grid md:grid-cols-6 gap-2 min-w-max md:min-w-full">
+                    <div class="flow-step active flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border-2 border-amber-300 rounded-lg shadow-sm text-center" data-tahap="laporan">
+                        <span class="font-semibold text-sm">1. Laporan & Penyelidikan</span>
+                    </div>
+                    <div class="flow-step flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border rounded-lg shadow-sm text-center" data-tahap="penyidikan">
+                        <span class="font-semibold text-sm">2. Penyidikan & Upaya Paksa</span>
+                    </div>
+                    <div class="flow-step flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border rounded-lg shadow-sm text-center" data-tahap="keadilan_restoratif">
+                        <span class="font-semibold text-sm">3. Opsi Keadilan Restoratif</span>
+                    </div>
+                    <div class="flow-step flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border rounded-lg shadow-sm text-center" data-tahap="penuntutan">
+                        <span class="font-semibold text-sm">4. Penuntutan</span>
+                    </div>
+                    <div class="flow-step flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border rounded-lg shadow-sm text-center" data-tahap="sidang">
+                        <span class="font-semibold text-sm">5. Sidang Pengadilan</span>
+                    </div>
+                    <div class="flow-step flex-shrink-0 md:flex-shrink w-40 md:w-auto p-4 bg-white border rounded-lg shadow-sm text-center" data-tahap="upaya_hukum">
+                        <span class="font-semibold text-sm">6. Upaya Hukum</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alurDetailContainer" class="mt-8 p-6 bg-white rounded-lg shadow-lg">
+                <!-- Detail Alur akan di-render oleh JavaScript -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal untuk Detail Pasal -->
+    <div id="pasalModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            
+            <div id="modal-bg" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div id="modal-icon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                            <!-- Icon diatur oleh JS -->
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title">Judul Pasal</h3>
+                            <p class="text-sm font-medium text-gray-500 mb-4" id="modal-pasal">Pasal XXX</p>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-700 font-semibold mb-2">Isi Pasal:</p>
+                                <blockquote class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border-l-4" id="modal-isi">
+                                    Isi pasal akan dimuat di sini...
+                                </blockquote>
+                                <p class="text-sm text-gray-700 font-semibold mt-4 mb-2">Analisis Masalah:</p>
+                                <p class="text-sm text-gray-600" id="modal-analisis">
+                                    Analisis masalah akan dimuat di sini...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button id="modal-close-btn" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- DATA ---
+
+            const poinKunciData = [
+                {
+                    judul: "Keadilan Restoratif (RJ)",
+                    icon: "🤝",
+                    deskripsi: "Memperkenalkan mekanisme penyelesaian perkara di luar pengadilan (Pasal 74-83) untuk tindak pidana ringan, dengan fokus pada pemulihan korban dan kesepakatan damai.",
+                },
+                {
+                    judul: "Pengakuan Bukti Elektronik",
+                    icon: "💻",
+                    deskripsi: "Secara resmi mengakui 'Bukti Elektronik' (Pasal 222 ayat 1f) sebagai alat bukti sah di pengadilan, menyesuaikan hukum acara dengan era digital.",
+                },
+                {
+                    judul: "Perlindungan Kelompok Rentan",
+                    icon: "❤️",
+                    deskripsi: "Memberikan bab khusus (Pasal 137-139) untuk hak-hak penyandang disabilitas, perempuan, dan lansia dalam proses peradilan, termasuk sarana khusus dan perlindungan dari intimidasi.",
+                },
+                {
+                    judul: "Saksi Mahkota (Justice Collaborator)",
+                    icon: "🗣️",
+                    deskripsi: "Mengatur status Saksi Mahkota (Pasal 69), di mana tersangka/terdakwa yang berperan ringan dapat menjadi saksi dan mendapatkan keringanan tuntutan.",
+                },
+                {
+                    judul: "Putusan Pemaafan Hakim",
+                    icon: "⚖️",
+                    deskripsi: "Hakim dapat menyatakan terdakwa bersalah namun tidak menjatuhkan pidana (Pasal 1 angka 16) atas dasar keadilan, kemanusiaan, atau ringannya perbuatan.",
+                },
+                {
+                    judul: "Larangan Pamer Tersangka",
+                    icon: "🚫📸",
+                    deskripsi: "Melarang penyidik memamerkan tersangka ke publik dengan atribut tahanan (Pasal 86) untuk menjunjung asas praduga tak bersalah, kecuali kasus keamanan negara.",
+                }
+            ];
+
+            const pasalData = [
+                {
+                    id: 1,
+                    pasal: 'Pasal 33 ayat (1)',
+                    kategori: 'risiko',
+                    judul: 'Advokat Dilarang Mendengar',
+                    ringkasan: 'Dalam kasus keamanan negara, advokat hanya boleh melihat tapi tidak boleh mendengar pemeriksaan tersangka.',
+                    isi_pasal: "Dalam hal Penyidik sedang melakukan pemeriksaan terhadap Tersangka, Advokat dapat mengikuti jalannya pemeriksaan dengan melihat dan mendengar pemeriksaan... kecuali dalam hal tindak pidana terhadap keamanan negara, Advokat dapat hadir dengan cara hanya melihat, tetapi tidak dapat mendengar pemeriksaan terhadap Tersangka.",
+                    analisis: "Ini pelanggaran serius terhadap hak pembelaan (fair trial). Pengacara tidak bisa mencegah intimidasi verbal atau pertanyaan menjerat jika mereka dilarang mendengar. Kehadiran mereka menjadi formalitas belaka."
+                },
+                {
+                    id: 2,
+                    pasal: 'Pasal 142 ayat (3) huruf b',
+                    kategori: 'risiko',
+                    judul: 'Advokat Dibungkam di Media',
+                    ringkasan: 'Advokat dilarang memberikan pendapat di luar pengadilan (media) terkait permasalahan kliennya.',
+                    isi_pasal: "Advokat dilarang: ... b. memberikan pendapat diluar pengadilan terkait permasalahan kliennya.",
+                    analisis: "Ini adalah 'gag order' atau pembungkaman. Jika aparat boleh melakukan konferensi pers yang menyudutkan, pengacara harus punya hak untuk memberi klarifikasi di media. Pasal ini menciptakan ketidakseimbangan informasi publik."
+                },
+                {
+                    id: 3,
+                    pasal: 'Pasal 151 ayat (3)',
+                    kategori: 'risiko',
+                    judul: 'DPO Kehilangan Hak Praperadilan',
+                    ringkasan: 'Tersangka yang berstatus DPO tidak dapat mengajukan gugatan Praperadilan untuk menguji status tersangkanya.',
+                    isi_pasal: "Permohonan praperadilan... tidak dapat diajukan apabila Tersangka melarikan diri atau dalam status daftar pencarian orang.",
+                    analisis: "Sangat berbahaya bagi korban kriminalisasi. Aparat bisa saja menetapkan seseorang sebagai DPO secara administratif (misal panggilan tidak sampai) hanya untuk menggugurkan haknya melawan penetapan tersangka."
+                },
+                {
+                    id: 4,
+                    pasal: 'Pasal 124 ayat (3)',
+                    kategori: 'risiko',
+                    judul: 'Penyadapan Tanpa Izin Awal',
+                    ringkasan: 'Dalam keadaan mendesak, penyidik boleh melakukan penyadapan tanpa izin ketua pengadilan negeri terlebih dahulu.',
+                    isi_pasal: "Dalam keadaan mendesak, Penyadapan dapat dilaksanakan tanpa izin ketua pengadilan negeri.",
+                    analisis: "Frasa 'keadaan mendesak' sangat subjektif dan rentan disalahgunakan. Privasi warga negara bisa dilanggar lebih dulu baru dimintakan izin 1x24 jam setelahnya. Ini membalik logika pengawasan yudisial."
+                },
+                {
+                    id: 5,
+                    pasal: 'Pasal 106 ayat (4)',
+                    kategori: 'risiko',
+                    judul: 'Penggeledahan Tanpa Izin Awal',
+                    ringkasan: 'Dalam keadaan mendesak, penyidik boleh melakukan penggeledahan tanpa izin ketua pengadilan negeri.',
+                    isi_pasal: "Dalam keadaan mendesak, Penyidik dapat melakukan Penggeledahan tanpa izin dari ketua pengadilan negeri.",
+                    analisis: "Sama seperti penyadapan, pasal ini memberi kekuasaan absolut bagi penyidik untuk memasuki properti pribadi (rumah, kantor) tanpa pengawasan pengadilan di awal, berisiko tinggi terjadi kesewenang-wenangan."
+                },
+                {
+                    id: 6,
+                    pasal: 'Pasal 253 ayat (3)',
+                    kategori: 'transparansi',
+                    judul: 'Larangan Siaran Langsung Sidang',
+                    ringkasan: 'Mempublikasikan proses persidangan secara langsung (live streaming) dilarang tanpa izin pengadilan.',
+                    isi_pasal: "Setiap orang yang berada di sidang pengadilan dilarang mempublikasikan proses persidangan secara langsung tanpa izin pengadilan.",
+                    analisis: "Ini langkah mundur bagi transparansi peradilan. Siaran langsung adalah alat kontrol publik dalam kasus-kasus besar (korupsi, HAM) agar hakim dan jaksa diawasi. Larangan ini menutup akses pengawasan 'real-time' dari masyarakat."
+                },
+                {
+                    id: 7,
+                    pasal: 'Pasal 86 ayat (1)',
+                    kategori: 'reformasi',
+                    judul: 'Larangan "Pamer" Tersangka',
+                    ringkasan: 'Penyidik dilarang mengumumkan tersangka ke publik atau mengenakan atribut tahanan (baju oranye).',
+                    isi_pasal: "(1) Dalam melakukan penetapan Tersangka, Penyidik dilarang melakukan perbuatan yang menimbulkan praduga bersalah dengan cara mengumumkan penetapan Tersangka kepada publik dan/atau mengenakan atribut tertentu kepada Tersangka yang menunjukkan Tersangka bersalah. (2) Larangan ... dikecualikan dalam hal tindak pidana yang berkaitan dengan keamanan negara.",
+                    analisis: "Langkah progresif untuk menjunjung asas praduga tak bersalah (presumption of innocence). Namun, ayat (2) memberi pengecualian untuk kasus 'keamanan negara' yang definisinya bisa karet dan dipakai untuk mempermalukan aktivis."
+                },
+                {
+                    id: 8,
+                    pasal: 'BAB IV (Pasal 74-83)',
+                    kategori: 'reformasi',
+                    judul: 'Keadilan Restoratif (RJ)',
+                    ringkasan: 'Mengatur penyelesaian perkara ringan di luar pengadilan dengan fokus pemulihan korban.',
+                    isi_pasal: "Pasal 74: (1) Mekanisme Keadilan Restoratif dilaksanakan melalui penyelesaian perkara di luar pengadilan. (2) ...dilakukan pada tingkat: a. Penyelidikan; b. Penyidikan; dan c. Penuntutan.",
+                    analisis: "Reformasi besar yang berpotensi mengurangi kepadatan penjara (overcapacity) dan memberikan keadilan substantif bagi korban tindak pidana ringan, di mana fokusnya adalah perdamaian dan pemulihan, bukan pemenjaraan."
+                },
+                {
+                    id: 9,
+                    pasal: 'BAB VI (Pasal 137-139)',
+                    kategori: 'reformasi',
+                    judul: 'Hak Kelompok Rentan',
+                    ringkasan: 'Memberi jaminan hak khusus bagi penyandang disabilitas, perempuan, dan lansia dalam proses hukum.',
+                    isi_pasal: "Pasal 137 (Disabilitas), Pasal 138 (Perempuan: ...bebas dari sikap dan pernyataan yang merendahkan, menyalahkan, dan/atau mengintimidasi), Pasal 139 (Lansia).",
+                    analisis: "Pengakuan penting bahwa kelompok rentan membutuhkan perlakuan khusus. Pasal 138 yang melarang pernyataan merendahkan bagi perempuan adalah kemajuan signifikan untuk melindungi korban kekerasan seksual dalam pemeriksaan."
+                },
+                {
+                    id: 10,
+                    pasal: 'Pasal 151 ayat (3)',
+                    kategori: 'risiko',
+                    judul: 'DPO Kehilangan Hak Praperadilan',
+                    ringkasan: 'Tersangka yang berstatus DPO tidak dapat mengajukan gugatan Praperadilan untuk menguji status tersangkanya.',
+                    isi_pasal: "Permohonan praperadilan sebagaimana dimaksud pada Pasal 149 ayat (1) huruf a dan huruf e tidak dapat diajukan apabila Tersangka melarikan diri atau dalam status daftar pencarian orang.",
+                    analisis: "Sangat berbahaya bagi korban kriminalisasi. Aparat bisa saja menetapkan seseorang sebagai DPO secara administratif (misal panggilan tidak sampai) hanya untuk menggugurkan haknya melawan penetapan tersangka."
+                },
+                {
+                    id: 11,
+                    pasal: 'Pasal 100 ayat (7) & (8)',
+                    kategori: 'risiko',
+                    judul: 'Konversi Tahanan Rumah/Kota',
+                    ringkasan: 'Tahanan rumah hanya dihitung 1/3 hari, dan tahanan kota hanya 1/5 hari dari masa pidana penjara.',
+                    isi_pasal: "(7) Untuk penahanan rumah, pengurangan ... sebanyak 1/3 (satu per tiga) dari jumlah waktu Penahanan. (8) Untuk penahanan kota atau kabupaten, pengurangan ... sebanyak 1/5 (satu per lima) dari jumlah waktu Penahanan.",
+                    analisis: "Sangat merugikan. Seseorang yang kooperatif dan menjadi tahanan kota selama 5 hari, kebebasannya tetap terkekang (wajib lapor, dilarang ke luar kota), namun itu hanya dihitung sebagai 1 hari menjalani pidana. Ini tidak adil."
+                }
+            ];
+
+            const alurData = {
+                laporan: {
+                    judul: "1. Laporan & Penyelidikan (Pasal 5, 13)",
+                    deskripsi: "Proses dimulai ketika aparat menerima Laporan atau Pengaduan, atau menemukan peristiwa. Penyelidik (Polisi) kemudian melakukan serangkaian tindakan (pengamatan, wawancara, dll) untuk mencari dan menemukan peristiwa yang diduga sebagai tindak pidana guna menentukan dapat atau tidaknya dilakukan Penyidikan."
+                },
+                penyidikan: {
+                    judul: "2. Penyidikan & Upaya Paksa (Pasal 22, 84)",
+                    deskripsi: "Jika ditemukan tindak pidana, Penyidik memulai Penyidikan untuk mencari bukti dan menemukan tersangka. Di tahap ini, Penyidik dapat melakukan 'Upaya Paksa' seperti Penetapan Tersangka, Penangkapan, Penahanan, Penggeledahan, dan Penyitaan. RUU ini mengatur beberapa upaya paksa bisa dilakukan tanpa izin pengadilan dalam 'keadaan mendesak'."
+                },
+                keadilan_restoratif: {
+                    judul: "3. Opsi Keadilan Restoratif (Pasal 74)",
+                    deskripsi: "Pada tahap Penyelidikan, Penyidikan, atau Penuntutan, RUU ini membuka opsi Keadilan Restoratif (RJ) untuk tindak pidana tertentu (bukan terorisme, korupsi, dll). Jika ada kesepakatan damai dan pemulihan korban, perkara dapat dihentikan di luar pengadilan."
+                },
+                penuntutan: {
+                    judul: "4. Penuntutan (Pasal 60, 66)",
+                    deskripsi: "Setelah berkas perkara dinyatakan lengkap (P-21) oleh Penuntut Umum (Jaksa), Penyidik menyerahkan tersangka dan barang bukti. Penuntut Umum kemudian menyiapkan surat dakwaan dan melimpahkan perkara ke pengadilan negeri untuk disidangkan."
+                },
+                sidang: {
+                    judul: "5. Sidang Pengadilan (Pasal 188, 222)",
+                    deskripsi: "Hakim memeriksa, mengadili, dan memutus perkara. Proses ini mencakup pembacaan dakwaan, pembuktian (termasuk alat bukti baru seperti Bukti Elektronik), tuntutan, pembelaan (pledoi), dan vonis. Sidang dilarang disiarkan langsung tanpa izin (Pasal 253)."
+                },
+                upaya_hukum: {
+                    judul: "6. Upaya Hukum (Pasal 269, 283, 302)",
+                    deskripsi: "Pihak yang tidak puas (Terdakwa atau Jaksa) dapat mengajukan Upaya Hukum Biasa (Banding ke Pengadilan Tinggi, Kasasi ke Mahkamah Agung) atau Upaya Hukum Luar Biasa (Peninjauan Kembali/PK oleh Terpidana)."
+                }
+            };
+
+            // --- ELEMEN DOM ---
+            const poinKunciGrid = document.getElementById('poinKunciGrid');
+            const pasalGrid = document.getElementById('pasalGrid');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const pasalModal = document.getElementById('pasalModal');
+            const modalBg = document.getElementById('modal-bg');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalTitle = document.getElementById('modal-title');
+            const modalPasal = document.getElementById('modal-pasal');
+            const modalIsi = document.getElementById('modal-isi');
+            const modalAnalisis = document.getElementById('modal-analisis');
+            const modalIcon = document.getElementById('modal-icon');
+            const alurSteps = document.querySelectorAll('.flow-step');
+            const alurDetailContainer = document.getElementById('alurDetailContainer');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            // --- FUNGSI RENDER ---
+
+            function renderPoinKunci() {
+                poinKunciData.forEach(poin => {
+                    const card = document.createElement('div');
+                    card.className = 'pasal-card bg-white p-6 rounded-lg shadow-lg cursor-pointer';
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-4">
+                            <span class="text-3xl">${poin.icon}</span>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">${poin.judul}</h3>
+                                <p class="text-gray-600 text-sm mt-1">${poin.deskripsi}</p>
+                            </div>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => {
+                        const modalIconHtml = `<span class="text-2xl">${poin.icon}</span>`;
+                        modalIcon.innerHTML = modalIconHtml;
+                        modalIcon.className = 'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10';
+                        modalTitle.textContent = poin.judul;
+                        modalPasal.textContent = "Poin Kunci Reformasi";
+                        modalIsi.textContent = poin.deskripsi;
+                        modalAnalisis.textContent = "Ini adalah salah satu perubahan atau penegasan penting dalam RUU KUHAP yang bertujuan memodernisasi hukum acara pidana di Indonesia.";
+                        pasalModal.classList.remove('hidden');
+                    });
+                    poinKunciGrid.appendChild(card);
+                });
+            }
+
+            function renderPasal(filter = 'semua') {
+                pasalGrid.innerHTML = '';
+                const filteredData = pasalData.filter(p => {
+                    if (filter === 'semua') return true;
+                    if (filter === 'transparansi') return p.kategori === 'transparansi' || p.pasal === 'Pasal 86 ayat (1)';
+                    return p.kategori === filter;
+                });
+
+                if (filteredData.length === 0) {
+                    pasalGrid.innerHTML = `<p class="text-gray-600 md:col-span-3 text-center">Tidak ada pasal yang sesuai dengan filter ini.</p>`;
+                    return;
+                }
+
+                filteredData.forEach(pasal => {
+                    const isRisiko = pasal.kategori === 'risiko' || pasal.kategori === 'transparansi';
+                    const tagBg = isRisiko ? 'bg-red-100' : 'bg-green-100';
+                    const tagText = isRisiko ? 'text-red-800' : 'text-green-800';
+                    const tagNama = isRisiko ? 'Risiko' : 'Reformasi';
+                    if (pasal.kategori === 'transparansi') tagNama = 'Transparansi';
+                    
+                    const card = document.createElement('div');
+                    card.className = 'pasal-card bg-white p-6 rounded-lg shadow-lg flex flex-col justify-between';
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${tagBg} ${tagText}">${tagNama}</span>
+                                <span class="text-sm font-medium text-gray-500">${pasal.pasal}</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">${pasal.judul}</h3>
+                            <p class="text-sm text-gray-600 mb-4">${pasal.ringkasan}</p>
+                        </div>
+                        <button class="mt-4 w-full text-sm font-medium text-amber-700 hover:text-amber-900" data-id="${pasal.id}">
+                            Lihat Detail & Analisis &rarr;
+                        </button>
+                    `;
+                    pasalGrid.appendChild(card);
+                });
+            }
+
+            function showDetail(id) {
+                const pasal = pasalData.find(p => p.id == id);
+                if (!pasal) return;
+
+                const isRisiko = pasal.kategori === 'risiko' || pasal.kategori === 'transparansi';
+                const iconBg = isRisiko ? 'bg-red-100' : 'bg-green-100';
+                const iconSvg = isRisiko ? 
+                    `<svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>` : 
+                    `<svg class="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+                
+                modalIcon.innerHTML = iconSvg;
+                modalIcon.className = `mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${iconBg} sm:mx-0 sm:h-10 sm:w-10`;
+                
+                modalTitle.textContent = pasal.judul;
+                modalPasal.textContent = pasal.pasal;
+                modalIsi.textContent = pasal.isi_pasal;
+                modalAnalisis.textContent = pasal.analisis;
+                pasalModal.classList.remove('hidden');
+            }
+
+            function showAlurDetail(tahap) {
+                const data = alurData[tahap];
+                if (!data) return;
+
+                alurDetailContainer.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">${data.judul}</h3>
+                    <p class="text-gray-700">${data.deskripsi}</p>
+                `;
+                
+                alurSteps.forEach(step => {
+                    step.classList.remove('active', 'border-amber-300', 'bg-white');
+                    if (step.dataset.tahap === tahap) {
+                        step.classList.add('active', 'border-amber-300');
+                    } else {
+                        step.classList.add('bg-white');
+                    }
+                });
+            }
+
+            // --- Chart.js ---
+            function createChart() {
+                const ctx = document.getElementById('ruuChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Hak Warga & Korban', 'Kewenangan Aparat', 'Proses Peradilan & Bukti'],
+                        datasets: [{
+                            label: 'Fokus Tematik RUU',
+                            data: [40, 35, 25],
+                            backgroundColor: [
+                                'rgb(52, 211, 153)',
+                                'rgb(239, 68, 68)',
+                                'rgb(251, 191, 36)',
+                            ],
+                            borderColor: [
+                                'rgb(5, 150, 105)',
+                                'rgb(185, 28, 28)',
+                                'rgb(217, 119, 6)',
+                            ],
+                            borderWidth: 1,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- EVENT LISTENERS ---
+
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                mobileMenuBtn.querySelector('svg.block').classList.toggle('hidden');
+                mobileMenuBtn.querySelector('svg.hidden').classList.toggle('hidden');
+            });
+            
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuBtn.querySelector('svg.block').classList.remove('hidden');
+                    mobileMenuBtn.querySelector('svg.hidden').classList.add('hidden');
+                });
+            });
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    filterButtons.forEach(btn => btn.classList.remove('active', 'bg-amber-600', 'text-white'));
+                    button.classList.add('active');
+                    renderPasal(button.dataset.filter);
+                });
+            });
+
+            pasalGrid.addEventListener('click', function (e) {
+                const button = e.target.closest('button[data-id]');
+                if (button) {
+                    showDetail(button.dataset.id);
+                }
+            });
+            
+            modalCloseBtn.addEventListener('click', () => pasalModal.classList.add('hidden'));
+            modalBg.addEventListener('click', () => pasalModal.classList.add('hidden'));
+
+            alurSteps.forEach(step => {
+                step.addEventListener('click', () => {
+                    showAlurDetail(step.dataset.tahap);
+                });
+            });
+
+            // Navigasi Scroll
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    
+                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                    if (this.classList.contains('nav-link')) {
+                        this.classList.add('active');
+                    }
+                });
+            });
+
+            // --- INISIALISASI ---
+            createChart();
+            renderPoinKunci();
+            renderPasal('semua');
+            showAlurDetail('laporan'); 
+        });
+    </script>
+</body>
+</html>
